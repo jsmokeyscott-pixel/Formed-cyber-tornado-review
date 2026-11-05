@@ -1,0 +1,765 @@
+
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Signal Tornado: Networks, Cyber and Cellular</title>
+<style>
+:root{color-scheme:dark;--bg:#07111a;--panel:#0d2030;--line:#3a596b;--ink:#eaf5ff;--muted:#9cb6c9;--accent:#59c7f0;--good:#4ade80;--bad:#f87171}
+*{box-sizing:border-box}
+html{overscroll-behavior:none}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;overflow-x:hidden;padding-bottom:env(safe-area-inset-bottom)}
+header{padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top));background:var(--panel);border-bottom:1px solid var(--line)}
+h1{font-size:21px;margin:0;letter-spacing:.02em}
+header p{color:var(--muted);margin:3px 0 0;font-size:13px}
+button,select{font:inherit}
+button{background:#237da9;color:#fff;border:1px solid #5aa9cd;padding:10px 16px;border-radius:6px;font-weight:700;cursor:pointer;touch-action:manipulation}
+button:hover{background:#3195c7}
+button:focus-visible,select:focus-visible,summary:focus-visible,.chip:focus-visible{outline:3px solid #ffce86;outline-offset:2px}
+
+#game{position:relative;height:66vh;min-height:430px;overflow:hidden;background:#17232b}
+#screen{width:100%;height:100%;display:block;touch-action:none;user-select:none;-webkit-user-select:none}
+
+#hud{position:absolute;left:0;right:0;top:0;padding:8px;display:flex;flex-direction:column;gap:6px;pointer-events:none;z-index:5}
+#hud[hidden]{display:none}
+.hudbar{display:flex;align-items:center;gap:10px;font-size:12px;background:#06121ccc;border:1px solid #57768c;border-radius:8px;padding:6px 10px;white-space:nowrap}
+.hp{flex:1;min-width:60px;height:10px;background:#1c2f3d;border-radius:5px;overflow:hidden}
+.hp i{display:block;height:100%;width:100%;background:var(--good);transition:width .3s,background .3s}
+.hudbar b{color:#7bd9ff}
+#qcard{background:#081520e8;border:1px solid #61869a;border-left:6px solid var(--lc,#59c7f0);border-radius:8px;padding:8px 11px}
+#qtag{font-size:12px;font-weight:800;color:var(--lc,#59c7f0)}
+#qtext{font-size:16px;font-weight:700;line-height:1.3;margin-top:2px}
+#chips{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;pointer-events:auto}
+.chip{background:#0b1a26e6;border:2px solid #3e5f74;border-radius:8px;padding:6px 4px;text-align:center;font-size:13px;font-weight:700;color:#d9ecf8;min-height:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;line-height:1.15;user-select:none;-webkit-user-select:none}
+.chip.on{border-color:#7bd9ff;background:#14415ce8;box-shadow:0 0 0 2px #7bd9ff44}
+.chip.right{border-color:var(--good);background:#14532de8}
+.chip.wrong{border-color:var(--bad);background:#7f1d1de8}
+.chip.danger{box-shadow:inset 0 0 0 3px #ff9f43;animation:blink .35s steps(2) infinite}
+@keyframes blink{50%{box-shadow:inset 0 0 0 3px #ff9f4300}}
+
+#banner{position:absolute;left:50%;top:47%;transform:translate(-50%,-50%);z-index:6;pointer-events:none;font-weight:900;font-size:30px;text-align:center;text-shadow:0 3px 14px #000;opacity:0;white-space:nowrap}
+#banner small{display:block;font-size:15px;font-weight:700;color:#fff}
+#banner.good{color:var(--good)}#banner.bad{color:var(--bad)}
+#banner.show{animation:pop 1.6s ease-out forwards}
+@keyframes pop{0%{opacity:0;transform:translate(-50%,-40%) scale(.8)}12%{opacity:1;transform:translate(-50%,-50%) scale(1.05)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-58%) scale(1)}}
+
+#hint{position:absolute;bottom:4%;left:50%;transform:translateX(-50%);background:#07121bc8;border-radius:18px;padding:6px 12px;color:#e7f5ff;font-size:12px;pointer-events:none;white-space:nowrap;z-index:4}
+
+#overlay{position:absolute;z-index:50;left:50%;top:50%;transform:translate(-50%,-50%);width:min(92%,520px);max-height:90%;overflow-y:auto;overscroll-behavior:contain;background:#081520f2;border:1px solid #61869a;border-radius:12px;padding:20px;text-align:center;box-shadow:0 12px 60px #0009}
+#overlay[hidden]{display:none}
+#overlay h2{margin:0 0 8px}
+#overlay p{line-height:1.5;color:#c0d7e6;margin:8px 0}
+#overlay label{display:block;font-size:13px;color:var(--muted);margin:12px 0 4px}
+#overlay select{width:100%;max-width:340px;padding:10px;border-radius:8px;background:#0f2638;color:var(--ink);border:1px solid #5a7f95}
+.bigbtn{min-height:54px;min-width:190px;font-size:17px;margin-top:12px}
+.ghost{background:transparent;border-color:#5a7f95;margin-left:6px}
+.result-stats{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin:8px 0;font-size:14px}
+.result-stats b{display:block;font-size:22px;color:#7bd9ff}
+.review{text-align:left;margin-top:10px;font-size:13px;line-height:1.45}
+.review div{border-left:4px solid;padding:5px 8px;margin:6px 0;background:#0f2232}
+.review em{font-style:normal;color:var(--good);font-weight:700}
+
+.controls{display:flex;align-items:center;flex-wrap:wrap;justify-content:center;gap:9px;padding:12px 16px;padding-bottom:calc(12px + env(safe-area-inset-bottom));background:#142b3d}
+#touch{order:-1;width:100%;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+#touch button{height:72px;font-size:22px;border-radius:14px;background:#17658c;box-shadow:inset 0 -5px 0 #0a344d;touch-action:none}
+#touch button.pressed{background:#48b8e9;transform:scale(.98)}
+.controls>button{flex:1;min-height:45px;max-width:200px}
+.controls label{font-size:13px;display:flex;align-items:center;gap:6px}
+input[type=range]{accent-color:#56b9e6}
+
+main{max-width:1100px;margin:auto;padding:18px}
+main h2{margin:6px 0 10px;font-size:20px}
+#fact{padding:16px;background:linear-gradient(115deg,#18364a,#0c1e2c);border-left:6px solid var(--accent);border-radius:7px;min-height:110px}
+#factTitle{font-size:19px;font-weight:800}
+#factText{line-height:1.6;margin:6px 0 0}
+#factAnswer{margin:6px 0 0;font-weight:700}
+#openNotes{margin-top:10px;font-size:13px;padding:7px 12px;background:#173a52}
+#openNotes[hidden]{display:none}
+.mnemo{background:#102435;border:1px solid #304e62;border-radius:7px;padding:10px 14px;margin:16px 0 10px;line-height:1.6;font-size:14px}
+.mnemo b{color:#7bd9ff}
+#intel details{background:#13293a;border-left:6px solid var(--lc);border-radius:6px;margin:8px 0}
+#intel summary{cursor:pointer;padding:12px 14px;font-weight:800;font-size:16px;list-style:none;display:flex;align-items:baseline;gap:10px}
+#intel summary::-webkit-details-marker{display:none}
+#intel summary::after{content:'+';margin-left:auto;color:var(--muted);font-size:20px;line-height:1}
+#intel details[open] summary::after{content:'−'}
+#intel .num{color:var(--lc);font-size:22px;min-width:22px}
+#intel .pdu{font-weight:600;font-size:13px;color:var(--muted)}
+.lbody{padding:0 16px 14px;line-height:1.55;font-size:14px}
+.lbody dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 12px;margin:6px 0 10px}
+.lbody dt{color:var(--lc);font-weight:700}
+.lbody dd{margin:0;color:#d6e8f4}
+.lbody ul{margin:0;padding-left:20px;color:#c4dae8}
+.lbody li{margin:3px 0}
+#history{margin-top:16px;background:#102435;padding:12px;border:1px solid #304e62;border-radius:6px}
+#entries{max-height:150px;overflow:auto;font-size:13px;color:#b9d2e4}
+.entry{border-bottom:1px solid #28465a;padding:5px}
+
+@media(max-width:700px){
+ header{padding:7px 12px;padding-top:calc(7px + env(safe-area-inset-top))}h1{font-size:17px}header p{font-size:11px}
+ #game{height:calc(100dvh - 205px);min-height:400px;max-height:720px}
+ #qtext{font-size:14px}.chip{font-size:12px;min-height:36px}
+ #banner{font-size:26px}
+ main{padding:12px}
+}
+@media(orientation:landscape) and (max-height:550px){
+ header{display:none}
+ #game{height:calc(100dvh - 90px);min-height:240px}
+ .controls{padding:5px 10px;gap:6px;flex-wrap:nowrap}
+ #touch{width:45%;order:0}#touch button{height:60px;font-size:16px}
+ .controls>button{min-height:44px;font-size:12px;padding:5px}
+ .controls label{font-size:11px}
+ #hud{flex-direction:row;flex-wrap:wrap}.hudbar{width:100%}#qcard{flex:1 1 55%}#chips{flex:1 1 40%}
+}
+@media(prefers-reduced-motion:reduce){#banner.show{animation:fade 1.6s forwards}@keyframes fade{0%,80%{opacity:1}100%{opacity:0}}}
+</style></head><body>
+<header><h1>SIGNAL TORNADO</h1><p>Networks, cyberspace ops and cellular. Pick a topic, smash the right answer.</p></header>
+
+<div id="game">
+ <canvas id="screen" aria-label="Driving game"></canvas>
+ <div id="hud" hidden>
+  <div class="hudbar"><span>HP</span><div class="hp"><i id="hpFill"></i></div><span><b id="score">0</b> pts</span><span>Streak <b id="streak">0</b></span><span id="qcount">Q 0</span></div>
+  <div id="qcard"><div id="qtag">Topic</div><div id="qtext">…</div></div>
+  <div id="chips"><div class="chip" data-lane="-1" tabindex="0"></div><div class="chip" data-lane="0" tabindex="0"></div><div class="chip" data-lane="1" tabindex="0"></div></div>
+ </div>
+ <div id="banner"></div>
+ <div id="hint">Tap a lane or use ◀ ▶ • Smash the right answer</div>
+ <div id="overlay"></div>
+</div>
+
+<div class="controls">
+ <div id="touch"><button id="left" aria-label="Change lane left">◀ LEFT</button><button id="right" aria-label="Change lane right">RIGHT ▶</button></div>
+ <button id="pause">Pause</button><button id="restart">Restart</button><button id="menuBtn">Modes</button>
+ <label><input id="debrisOn" type="checkbox" checked> Debris</label>
+ <label>Speed <input id="difficulty" type="range" min="1" max="10" value="4"></label>
+</div>
+
+<main>
+ <h2>Last impact</h2>
+ <section id="fact"><div id="factTitle">Waiting for first impact</div><p id="factText">Each question shows three answers, one per lane. Drive into the right one. After every hit you get the explanation here.</p><p id="factAnswer"></p><button id="openNotes" hidden>Open topic notes</button></section>
+
+ <div class="mnemo"><b>Private ranges:</b> 10.x.x.x • 172.16–172.31.x.x • 192.168.x.x<br><b>NAT:</b> Static = 1 to 1 • Dynamic = pool • PAT = many to 1 (home routers)<br><b>Wi-Fi:</b> WEP (broken) → WPA/TKIP → WPA2/AES → WPA3/SAE<br><b>OSI → TCP/IP:</b> 7–5 Application • 4 Transport • 3 Internet • 2–1 Network Access<br><b>GSM path:</b> Phone → BTS → BSC → MSC • BSS = BTS + BSC • NSS = MSC, HLR, VLR, AuC, EIR</div>
+ <h2>Topic notes</h2>
+ <div id="intel"></div>
+ <section id="history"><b>Storm log</b><div id="entries">No events yet.</div></section>
+</main>
+
+<script>
+(()=>{'use strict';
+const $=id=>document.getElementById(id);
+const canvas=$('screen'),g=canvas.getContext('2d');
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ===== Layer data: notes + question bank ===== */
+const LAYERS=[
+{n:1,name:'Cyberspace Operations',code:'Doctrine',color:'#06b6d4',
+ objectives:'Layers of cyberspace, the three mission types, who does what',
+ terms:'From unclassified doctrine: JP 3-12 and FM 3-12.',
+ facts:['Cyberspace has 3 layers: physical network, logical network, cyber-persona.','OCO = offense. DCO = defense. DODIN operations = build, secure and run DoD networks.','USCYBERCOM is the combatant command for cyberspace.','17C = cyber operations specialist. 17E = electromagnetic warfare specialist.'],
+ qs:[
+ {q:'How many layers does cyberspace have in joint doctrine?',a:'3',w:['7','4'],why:'Physical network, logical network and cyber-persona.'},
+ {q:'Cables, routers and servers are which layer?',a:'Physical network',w:['Logical network','Cyber-persona'],why:'The physical layer is the actual hardware.'},
+ {q:'Your email account or online username is which layer?',a:'Cyber-persona',w:['Physical network','Logical network'],why:'Cyber-personas are digital identities.'},
+ {q:'OCO stands for…',a:'Offensive cyberspace operations',w:['Online cyber office','Open cyber operations'],why:'OCO projects power into or through cyberspace.'},
+ {q:'DCO stands for…',a:'Defensive cyberspace operations',w:['Data center operations','Digital comms office'],why:'DCO defends friendly networks from active threats.'},
+ {q:'Building, securing and running DoD networks is called…',a:'DODIN operations',w:['OCO','DCO'],why:'DODIN = Department of Defense Information Network.'},
+ {q:'Which command leads US military cyberspace operations?',a:'USCYBERCOM',w:['USSOCOM','USCENTCOM'],why:'US Cyber Command.'},
+ {q:'Army MOS for cyber operations specialist?',a:'17C',w:['17E','25B'],why:'17E is EW specialist; 25B is IT specialist.'},
+ {q:'Army field manual for cyberspace and EW?',a:'FM 3-12',w:['FM 3-0','FM 7-22'],why:'FM 7-22 is physical fitness.'}]},
+{n:2,name:'OSI Model',code:'7 layers',color:'#ec4899',
+ objectives:'Layer names and order, what each layer does, PDUs, devices',
+ terms:'Top down: All People Seem To Need Data Processing.',
+ facts:['7 Application, 6 Presentation, 5 Session, 4 Transport, 3 Network, 2 Data Link, 1 Physical.','PDUs: Data, Segment (4), Packet (3), Frame (2), Bits (1).','Hub = Layer 1, switch = Layer 2, router = Layer 3.'],
+ qs:[
+ {q:'How many layers are in the OSI model?',a:'7',w:['4','5'],why:'The TCP/IP model has 4.'},
+ {q:'What is Layer 1?',a:'Physical',w:['Data Link','Application'],why:'Cables, connectors, signals and bits.'},
+ {q:'What is Layer 7?',a:'Application',w:['Physical','Session'],why:'Where network services like HTTP and DNS live.'},
+ {q:'What is Layer 3?',a:'Network',w:['Transport','Session'],why:'IP addresses and routing.'},
+ {q:'What is Layer 2?',a:'Data Link',w:['Network','Physical'],why:'MAC addresses and frames.'},
+ {q:'Which device works at Layer 3?',a:'Router',w:['Switch','Hub'],why:'Routers use IP addresses to move packets between networks.'},
+ {q:'Which device works at Layer 2?',a:'Switch',w:['Router','Hub'],why:'Switches use MAC addresses.'},
+ {q:'Data unit at Layer 3?',a:'Packet',w:['Frame','Bits'],why:'Packets at 3, frames at 2, bits at 1.'},
+ {q:'Data unit at Layer 2?',a:'Frame',w:['Packet','Segment'],why:'Frames carry MAC addresses.'},
+ {q:'Which layer handles encryption and data formats?',a:'Presentation',w:['Session','Network'],why:'Layer 6.'}]},
+{n:3,name:'TCP/IP',code:'4 layers',color:'#22c55e',
+ objectives:'TCP/IP layers, TCP vs UDP, the handshake, ping',
+ terms:'The protocol suite the internet runs on.',
+ facts:['4 layers: Application, Transport, Internet, Network Access.','TCP = reliable, connection-oriented. UDP = fast, connectionless.','Handshake: SYN, SYN-ACK, ACK.'],
+ qs:[
+ {q:'How many layers in the TCP/IP model?',a:'4',w:['7','3'],why:'Application, Transport, Internet, Network Access.'},
+ {q:'Which protocol guarantees delivery?',a:'TCP',w:['UDP','IP'],why:'TCP resends anything that gets lost.'},
+ {q:'Which protocol is faster but doesn’t guarantee delivery?',a:'UDP',w:['TCP','FTP'],why:'Good for streaming, gaming and voice.'},
+ {q:'First step of the TCP handshake?',a:'SYN',w:['ACK','FIN'],why:'SYN, SYN-ACK, ACK.'},
+ {q:'Last step of the TCP handshake?',a:'ACK',w:['SYN','SYN-ACK'],why:'The client acknowledges the server’s SYN-ACK.'},
+ {q:'Which protocol does ping use?',a:'ICMP',w:['TCP','UDP'],why:'Internet Control Message Protocol.'},
+ {q:'TCP/IP layer where IP addresses live?',a:'Internet',w:['Transport','Application'],why:'Same job as OSI Layer 3.'},
+ {q:'TCP and UDP live at which layer?',a:'Transport',w:['Internet','Application'],why:'Same name in both models.'},
+ {q:'TCP flag that ends a connection politely?',a:'FIN',w:['SYN','URG'],why:'FIN = finish.'}]},
+{n:4,name:'MAC Addresses',code:'Layer 2',color:'#f97316',
+ objectives:'What a MAC is, its format, vendor ID, broadcast MAC',
+ terms:'The hardware address of a network card.',
+ facts:['48 bits, written as 12 hex digits like 00:1A:2B:3C:4D:5E.','First half = vendor (OUI). Second half = the device.','Broadcast MAC = FF:FF:FF:FF:FF:FF.'],
+ qs:[
+ {q:'A MAC address is also called a…',a:'Physical address',w:['Logical address','Web address'],why:'It is tied to the network card hardware.'},
+ {q:'How long is a MAC address?',a:'48 bits',w:['32 bits','128 bits'],why:'IPv4 is 32 bits; IPv6 is 128.'},
+ {q:'MAC addresses are written in…',a:'Hexadecimal',w:['Decimal','Binary only'],why:'0–9 and A–F.'},
+ {q:'First half of a MAC address identifies the…',a:'Manufacturer',w:['Network','City'],why:'It is called the OUI (organizationally unique identifier).'},
+ {q:'Broadcast MAC address?',a:'FF:FF:FF:FF:FF:FF',w:['00:00:00:00:00:00','11:11:11:11:11:11'],why:'All ones = every device on the LAN.'},
+ {q:'Which device reads MAC addresses to forward frames?',a:'Switch',w:['Router','Modem'],why:'Switches keep a MAC address table.'},
+ {q:'MAC addresses work at which OSI layer?',a:'Layer 2',w:['Layer 3','Layer 7'],why:'Data Link layer.'},
+ {q:'Windows command that shows your MAC address?',a:'ipconfig /all',w:['ping','netstat'],why:'Look for “Physical Address.”'}]},
+{n:5,name:'ARP and ARP Cache',code:'IP → MAC',color:'#fb7185',
+ objectives:'What ARP does, how requests and replies work, the ARP cache, ARP poisoning',
+ terms:'ARP = Address Resolution Protocol.',
+ facts:['ARP finds the MAC address that belongs to an IP on the local network.','ARP request = broadcast (“who has this IP?”). ARP reply = unicast.','The ARP cache stores recent IP-to-MAC matches so the host doesn’t have to ask again.','arp -a shows the cache. arp -d clears entries (needs admin).','Dynamic entries expire; static entries stay until removed.','ARP poisoning plants fake entries. Defense: Dynamic ARP Inspection (DAI).','IPv6 does not use ARP; it uses Neighbor Discovery (NDP).'],
+ qs:[
+ {q:'What does ARP find?',a:'MAC from an IP',w:['IP from a name','Name from an IP'],why:'DNS turns names into IPs; ARP turns IPs into MACs.'},
+ {q:'What does ARP stand for?',a:'Address Resolution Protocol',w:['Automatic Routing Protocol','Access Request Protocol'],why:'It resolves Layer 3 addresses to Layer 2 addresses.'},
+ {q:'An ARP request is sent as a…',a:'Broadcast',w:['Unicast','Multicast'],why:'Everyone on the LAN hears “who has this IP?”'},
+ {q:'An ARP reply is sent as a…',a:'Unicast',w:['Broadcast','Multicast'],why:'Only the device that asked gets the answer.'},
+ {q:'Where does a computer store recent IP-to-MAC matches?',a:'ARP cache',w:['DNS cache','Routing table'],why:'The cache saves it from asking again every time.'},
+ {q:'Command to view the ARP cache on Windows?',a:'arp -a',w:['arp -d','ipconfig'],why:'Works on Linux and macOS too.'},
+ {q:'Command to clear ARP cache entries on Windows?',a:'arp -d',w:['arp -a','arp -s'],why:'Run it as administrator. arp -s adds a static entry.'},
+ {q:'ARP entries learned automatically are…',a:'Dynamic',w:['Static','Permanent'],why:'Dynamic entries time out. Static entries are added by hand.'},
+ {q:'Sending fake ARP replies to redirect traffic is…',a:'ARP poisoning',w:['MAC flooding','Smurf attack'],why:'It lets an attacker sit in the middle of traffic.'},
+ {q:'Switch feature that blocks ARP poisoning?',a:'DAI',w:['STP','PoE'],why:'Dynamic ARP Inspection checks ARP against trusted records.'},
+ {q:'What does IPv6 use instead of ARP?',a:'NDP',w:['DHCP','DNS'],why:'Neighbor Discovery Protocol.'}]},
+{n:6,name:'Origins of the Internet',code:'History',color:'#a78bfa',
+ objectives:'ARPANET, key people and dates, internet vs web',
+ terms:'Started as a DoD research project.',
+ facts:['ARPANET (1969) was funded by ARPA, now DARPA.','First message: UCLA to Stanford Research Institute. Only “LO” arrived before the crash.','Vint Cerf and Bob Kahn created TCP/IP. ARPANET switched to it in 1983.','Tim Berners-Lee invented the World Wide Web in 1989.','Ray Tomlinson sent the first network email in 1971.'],
+ qs:[
+ {q:'The internet started as which network?',a:'ARPANET',w:['Ethernet','NIPRNet'],why:'ARPANET went live in 1969.'},
+ {q:'Which department funded ARPANET?',a:'Defense (DoD)',w:['Education','Energy'],why:'Through ARPA, now called DARPA.'},
+ {q:'Year ARPANET sent its first message?',a:'1969',w:['1983','1991'],why:'The same year as the Moon landing.'},
+ {q:'What arrived in the first ARPANET message?',a:'LO',w:['HELLO','TEST'],why:'They were typing LOGIN when it crashed.'},
+ {q:'Who are called the fathers of the internet?',a:'Cerf and Kahn',w:['Gates and Allen','Jobs and Wozniak'],why:'They designed TCP/IP.'},
+ {q:'Year ARPANET switched to TCP/IP?',a:'1983',w:['1969','2000'],why:'January 1, 1983.'},
+ {q:'Who invented the World Wide Web?',a:'Tim Berners-Lee',w:['Vint Cerf','Bill Gates'],why:'In 1989 at CERN.'},
+ {q:'Who sent the first network email?',a:'Ray Tomlinson',w:['Tim Berners-Lee','Steve Jobs'],why:'In 1971. He picked the @ sign.'},
+ {q:'Is the web the same thing as the internet?',a:'No, it runs on it',w:['Yes, same thing','The web came first'],why:'The internet is the network; the web is one service on it.'}]},
+{n:7,name:'IP Addresses',code:'IPv4/IPv6',color:'#eab308',
+ objectives:'IPv4 vs IPv6, octets, classes, loopback, APIPA, public vs private',
+ terms:'The logical (Layer 3) address of a device.',
+ facts:['IPv4 = 32 bits, 4 octets, each 0–255.','IPv6 = 128 bits in hex.','Classes by first octet: A 1–126, B 128–191, C 192–223.','127.0.0.1 = loopback. 169.254.x.x = APIPA (DHCP failed).'],
+ qs:[
+ {q:'How many octets are in an IPv4 address?',a:'4',w:['6','8'],why:'Like 192.168.1.10.'},
+ {q:'Highest number allowed in one IPv4 octet?',a:'255',w:['256','999'],why:'8 bits can count from 0 to 255.'},
+ {q:'How long is an IPv4 address?',a:'32 bits',w:['48 bits','128 bits'],why:'4 octets × 8 bits.'},
+ {q:'How long is an IPv6 address?',a:'128 bits',w:['32 bits','64 bits'],why:'Created because IPv4 ran out.'},
+ {q:'Which address is a valid IPv4 address?',a:'10.0.0.1',w:['10.0.0.256','10.0.0'],why:'Four octets, each 0–255.'},
+ {q:'IPv4 loopback address?',a:'127.0.0.1',w:['192.168.0.1','0.0.0.0'],why:'It always points back to your own computer.'},
+ {q:'A computer gets 169.254.x.x. What failed?',a:'DHCP',w:['DNS','The monitor'],why:'That is APIPA, a self-assigned address.'},
+ {q:'Class of 192.168.1.5?',a:'Class C',w:['Class A','Class B'],why:'First octet 192–223 = Class C.'},
+ {q:'Class of 10.1.1.1?',a:'Class A',w:['Class B','Class C'],why:'First octet 1–126 = Class A.'},
+ {q:'Which hands out IP addresses automatically?',a:'DHCP',w:['DNS','ARP'],why:'Dynamic Host Configuration Protocol.'}]},
+{n:8,name:'Private Addresses',code:'RFC 1918',color:'#facc15',
+ objectives:'The three private ranges, why they exist, spotting private vs public',
+ terms:'Private addresses work inside a network but are not routed on the internet.',
+ facts:['10.0.0.0 – 10.255.255.255 (10.0.0.0/8): the biggest range.','172.16.0.0 – 172.31.255.255 (172.16.0.0/12).','192.168.0.0 – 192.168.255.255 (192.168.0.0/16): most home routers.','Private addresses need NAT to reach the internet.','They were created to save public IPv4 addresses.'],
+ qs:[
+ {q:'Can private IP addresses be routed on the internet?',a:'No',w:['Yes','Only at night'],why:'They need NAT to reach the internet.'},
+ {q:'Which is a private address?',a:'192.168.1.1',w:['8.8.8.8','193.168.1.1'],why:'192.168.x.x is private. 193.168 is public.'},
+ {q:'Which is a private address?',a:'10.20.30.40',w:['11.20.30.40','100.20.30.40'],why:'Anything starting with 10 is private.'},
+ {q:'Which is a private address?',a:'172.20.5.5',w:['172.32.5.5','172.15.5.5'],why:'Only 172.16 through 172.31 is private.'},
+ {q:'Which private range is the largest?',a:'10.0.0.0/8',w:['192.168.0.0/16','172.16.0.0/12'],why:'About 16.7 million addresses.'},
+ {q:'Private range most home routers use?',a:'192.168.x.x',w:['10.x.x.x','172.16.x.x'],why:'Like 192.168.0.1 or 192.168.1.1.'},
+ {q:'Which RFC defines private addresses?',a:'RFC 1918',w:['RFC 791','RFC 2616'],why:'RFC 791 defines IPv4; RFC 2616 was HTTP/1.1.'},
+ {q:'Why were private addresses created?',a:'Save public IPs',w:['Faster Wi-Fi','Block viruses'],why:'IPv4 was running out of addresses.'},
+ {q:'Is 8.8.8.8 public or private?',a:'Public',w:['Private','Loopback'],why:'It is Google’s public DNS server.'},
+ {q:'What lets private addresses reach the internet?',a:'NAT',w:['ARP','DNS'],why:'Network Address Translation.'}]},
+{n:9,name:'NAT Types',code:'Translation',color:'#38bdf8',
+ objectives:'Static NAT, dynamic NAT, PAT (overload), port forwarding, CGNAT, console NAT types',
+ terms:'NAT = Network Address Translation: swapping private addresses for public ones.',
+ facts:['Static NAT: one private IP ↔ one public IP, always the same.','Dynamic NAT: private IPs borrow from a pool of public IPs.','PAT (NAT overload): many private IPs share ONE public IP using port numbers. What home routers do.','Port forwarding: sends inbound traffic on a port to one inside device.','CGNAT: the ISP NATs many customers too (100.64.0.0/10).','Game consoles: Open, Moderate, Strict (or Type 1/2/3). Open connects easiest.'],
+ qs:[
+ {q:'What does NAT stand for?',a:'Network Address Translation',w:['Network Access Tool','New Address Table'],why:'It translates private addresses to public ones.'},
+ {q:'NAT type that maps one private IP to one public IP permanently?',a:'Static NAT',w:['Dynamic NAT','PAT'],why:'Used for servers that must always be reachable.'},
+ {q:'NAT type that borrows public IPs from a pool?',a:'Dynamic NAT',w:['Static NAT','PAT'],why:'First come, first served from the pool.'},
+ {q:'Many devices sharing ONE public IP using port numbers?',a:'PAT',w:['Static NAT','Dynamic NAT'],why:'Port Address Translation, also called NAT overload.'},
+ {q:'NAT type your home router uses?',a:'PAT (overload)',w:['Static NAT','No NAT'],why:'Every device in the house shares one public IP.'},
+ {q:'Sending outside traffic on a port to one inside device?',a:'Port forwarding',w:['Port mirroring','Port security'],why:'Common for game servers and cameras.'},
+ {q:'When the ISP also NATs many customers together?',a:'CGNAT',w:['PAT','APIPA'],why:'Carrier-grade NAT, using 100.64.0.0/10.'},
+ {q:'Console NAT type that connects to the most players?',a:'Open',w:['Strict','Moderate'],why:'Open (Type 1 or 2 on PlayStation) has the fewest restrictions.'},
+ {q:'Console NAT type with the most connection problems?',a:'Strict',w:['Open','Moderate'],why:'Strict (Type 3) can only connect to Open players.'},
+ {q:'Bonus security of NAT?',a:'Hides inside IPs',w:['Encrypts traffic','Stops viruses'],why:'Outsiders only see the public IP. NAT is not a firewall, though.'}]},
+{n:10,name:'Subnetting',code:'Basics',color:'#0ea5e9',
+ objectives:'What subnetting is, why we do it, easy host counts',
+ terms:'Usable hosts = total addresses − 2.',
+ facts:['Subnetting splits one network into smaller networks.','Every subnet loses 2 addresses: the network address and the broadcast address.','/24 = 254 hosts, /25 = 126, /26 = 62, /27 = 30, /28 = 14, /30 = 2.'],
+ qs:[
+ {q:'Subnetting means…',a:'Splitting a network',w:['Joining two ISPs','Encrypting data'],why:'One big network becomes several smaller ones.'},
+ {q:'Good reason to subnet?',a:'Less broadcast traffic',w:['Faster CPUs','Cheaper cables'],why:'Smaller networks = smaller broadcast domains, plus better security.'},
+ {q:'How many usable hosts in a /24?',a:'254',w:['256','255'],why:'256 addresses − network − broadcast = 254.'},
+ {q:'Why subtract 2 when counting usable hosts?',a:'Network + broadcast',w:['Router + switch','DNS + DHCP'],why:'Those two addresses cannot be given to devices.'},
+ {q:'First address in a subnet is the…',a:'Network address',w:['Broadcast address','Gateway'],why:'Like 192.168.1.0 in a /24.'},
+ {q:'Last address in a subnet is the…',a:'Broadcast address',w:['Network address','Loopback'],why:'Like 192.168.1.255 in a /24.'},
+ {q:'Usable hosts in a /30?',a:'2',w:['4','30'],why:'Perfect for a link between two routers.'},
+ {q:'Usable hosts in a /25?',a:'126',w:['128','254'],why:'128 − 2 = 126.'},
+ {q:'Broadcast address of 192.168.1.0/24?',a:'192.168.1.255',w:['192.168.1.0','192.168.1.1'],why:'The last address in the range.'}]},
+{n:11,name:'CIDR',code:'Slash notation',color:'#84cc16',
+ objectives:'What the slash number means, common masks',
+ terms:'CIDR = Classless Inter-Domain Routing.',
+ facts:['The slash number = how many bits are the network part.','/8 = 255.0.0.0 • /16 = 255.255.0.0 • /24 = 255.255.255.0.','Bigger slash number = smaller network.'],
+ qs:[
+ {q:'In 192.168.1.0/24, what does /24 mean?',a:'24 network bits',w:['24 hosts','24 subnets'],why:'The first 24 bits are the network part.'},
+ {q:'Subnet mask for /24?',a:'255.255.255.0',w:['255.255.0.0','255.0.0.0'],why:'Three full octets of ones.'},
+ {q:'Subnet mask for /16?',a:'255.255.0.0',w:['255.255.255.0','255.0.0.0'],why:'Two full octets.'},
+ {q:'Subnet mask for /8?',a:'255.0.0.0',w:['255.255.0.0','0.0.0.255'],why:'One full octet.'},
+ {q:'255.255.255.0 in slash notation?',a:'/24',w:['/16','/32'],why:'8 + 8 + 8 = 24.'},
+ {q:'Which is the SMALLEST network?',a:'/28',w:['/24','/16'],why:'Bigger slash number = fewer host bits.'},
+ {q:'Which is the BIGGEST network?',a:'/8',w:['/24','/30'],why:'Only 8 network bits leaves 24 for hosts.'},
+ {q:'What does CIDR stand for?',a:'Classless Inter-Domain Routing',w:['Cisco IP Data Routing','Classful IP Directory'],why:'It replaced fixed Class A/B/C sizes.'},
+ {q:'A /32 is…',a:'One single address',w:['The whole internet','A home network'],why:'All 32 bits are network bits.'}]},
+{n:12,name:'Topologies',code:'Layouts',color:'#f472b6',
+ objectives:'Star, bus, ring, mesh, hybrid; pros and cons',
+ terms:'Topology = how a network is laid out.',
+ facts:['Star: all devices to a central switch. Most common.','Bus: one main cable. One break takes it down.','Ring: data goes around in a circle.','Mesh: devices connect to many others. Most redundant.','Hybrid: a mix.'],
+ qs:[
+ {q:'Every device plugs into one central switch?',a:'Star',w:['Bus','Ring'],why:'The most common layout today.'},
+ {q:'All devices share one main cable?',a:'Bus',w:['Star','Mesh'],why:'A break anywhere can take down the whole network.'},
+ {q:'Data travels around in a circle?',a:'Ring',w:['Bus','Star'],why:'Each device passes data to the next.'},
+ {q:'Every device connects to every other device?',a:'Full mesh',w:['Star','Bus'],why:'Most redundant and most expensive.'},
+ {q:'Most common topology in offices today?',a:'Star',w:['Ring','Bus'],why:'Easy to add devices and troubleshoot.'},
+ {q:'In a star, what failure takes down everyone?',a:'Central switch',w:['One PC','One cable'],why:'One bad cable only affects one device.'},
+ {q:'Topology with the most redundancy?',a:'Mesh',w:['Bus','Star'],why:'Many paths, so one failure doesn’t stop traffic.'},
+ {q:'A mix of two or more topologies?',a:'Hybrid',w:['Mesh','Ring'],why:'Most real networks are hybrids.'},
+ {q:'A direct link between just two devices?',a:'Point-to-point',w:['Bus','Star'],why:'Like a microwave link between two sites.'}]},
+{n:13,name:'DoS and DDoS Attacks',code:'Availability',color:'#ef4444',
+ objectives:'DoS vs DDoS, botnets, smurf, fraggle, ping of death, SYN flood, teardrop, land, amplification, slowloris, defenses',
+ terms:'DoS attacks go after availability: they knock services offline.',
+ facts:['DoS = one attacker. DDoS = many machines at once (usually a botnet).','Smurf: spoofed pings sent to a broadcast address, so every host replies to the victim. Fix: disable directed broadcasts.','Fraggle: smurf using UDP instead of ICMP.','Ping of death: an oversized ping (over 65,535 bytes) that crashes old systems.','SYN flood: tons of SYNs, never finishing the handshake. Fix: SYN cookies.','Teardrop: overlapping fragments that crash reassembly.','Land: packet with the victim’s own IP as both source and destination.','Amplification (DNS, NTP): small spoofed request, huge reply aimed at the victim.','Slowloris: holds web connections open by sending headers very slowly.'],
+ qs:[
+ {q:'DoS attacks target which part of the CIA triad?',a:'Availability',w:['Confidentiality','Integrity'],why:'The goal is to make a service unusable.'},
+ {q:'Difference between DoS and DDoS?',a:'DDoS uses many machines',w:['DDoS is slower','DoS uses email'],why:'Distributed = attack from many sources at once.'},
+ {q:'Network of infected computers used in a DDoS?',a:'Botnet',w:['Honeynet','Intranet'],why:'The infected machines are called bots or zombies.'},
+ {q:'Spoofed pings sent to a broadcast address to flood a victim?',a:'Smurf attack',w:['Fraggle attack','Teardrop'],why:'Every host on the subnet replies to the victim’s spoofed address.'},
+ {q:'Smurf attacks use which protocol?',a:'ICMP',w:['UDP','TCP'],why:'ICMP echo requests (pings).'},
+ {q:'Smurf-style attack using UDP instead of ICMP?',a:'Fraggle attack',w:['Smurf attack','Land attack'],why:'Same idea, aimed at UDP echo and chargen ports.'},
+ {q:'Router fix that stops smurf attacks?',a:'Block directed broadcasts',w:['Enable Telnet','Add more RAM'],why:'Cisco: no ip directed-broadcast (the default today).'},
+ {q:'Oversized ping that crashes a system?',a:'Ping of death',w:['Smurf attack','SYN flood'],why:'Over 65,535 bytes after reassembly. Modern systems are patched.'},
+ {q:'Flood of SYNs that never finish the handshake?',a:'SYN flood',w:['Ping flood','Smurf attack'],why:'Half-open connections fill up the server’s table.'},
+ {q:'Defense against SYN floods?',a:'SYN cookies',w:['Longer passwords','Bigger monitor'],why:'The server doesn’t store state until the handshake completes.'},
+ {q:'Overlapping packet fragments that crash reassembly?',a:'Teardrop',w:['Land attack','Slowloris'],why:'Mostly affected old operating systems.'},
+ {q:'Packet with the victim’s IP as both source and destination?',a:'Land attack',w:['Smurf attack','Teardrop'],why:'The victim gets stuck replying to itself.'},
+ {q:'Small spoofed DNS query triggering a huge reply to the victim?',a:'DNS amplification',w:['DNS tunneling','ARP poisoning'],why:'Open resolvers multiply the attacker’s bandwidth.'},
+ {q:'Holding web connections open by sending headers very slowly?',a:'Slowloris',w:['Smurf','Teardrop'],why:'It ties up the server with very little bandwidth.'},
+ {q:'Faking the source IP address on packets?',a:'Spoofing',w:['Sniffing','Phishing'],why:'Spoofing is used in smurf, land and amplification attacks.'}]},
+{n:14,name:'Wi-Fi Security (WPA)',code:'WEP → WPA3',color:'#10b981',
+ objectives:'WEP, WPA, WPA2, WPA3; encryption types; Personal vs Enterprise; WPS',
+ terms:'Never use WEP. WPA3 is current; WPA2-AES is the minimum.',
+ facts:['WEP (1997): RC4 encryption, broken. Never use it.','WPA (2003): stopgap fix using TKIP. Also outdated.','WPA2 (2004): AES with CCMP. Still common. Hit by the KRACK attack in 2017 (patched).','WPA3 (2018): SAE replaces PSK, stronger against password guessing, forward secrecy.','Personal = one shared password. Enterprise = individual logins through 802.1X and RADIUS.','WPS (the push-button/PIN feature) has a weak PIN. Turn it off.','Enhanced Open (OWE) encrypts open networks with no password.'],
+ qs:[
+ {q:'Oldest Wi-Fi security, now completely broken?',a:'WEP',w:['WPA2','WPA3'],why:'Wired Equivalent Privacy can be cracked in minutes.'},
+ {q:'Encryption that WEP uses?',a:'RC4',w:['AES','SAE'],why:'Weak key handling made RC4 in WEP easy to crack.'},
+ {q:'WPA was a quick fix that used…',a:'TKIP',w:['AES','RSA'],why:'Temporal Key Integrity Protocol. Also outdated now.'},
+ {q:'Encryption used by WPA2?',a:'AES',w:['RC4','TKIP'],why:'AES with CCMP. Always choose AES over TKIP.'},
+ {q:'Newest Wi-Fi security standard?',a:'WPA3',w:['WPA2','WEP'],why:'Released in 2018.'},
+ {q:'WPA3-Personal replaces the pre-shared key with…',a:'SAE',w:['TKIP','WEP'],why:'Simultaneous Authentication of Equals resists password-guessing attacks.'},
+ {q:'Wi-Fi mode where everyone shares one password?',a:'Personal (PSK)',w:['Enterprise','Open'],why:'Fine for homes. Businesses should use Enterprise.'},
+ {q:'Wi-Fi mode with individual logins through a RADIUS server?',a:'Enterprise',w:['Personal','WEP'],why:'Uses 802.1X so each user has their own credentials.'},
+ {q:'Standard behind WPA2/WPA3-Enterprise logins?',a:'802.1X',w:['802.3','802.1Q'],why:'802.3 is Ethernet; 802.1Q is VLAN tagging.'},
+ {q:'Router feature with an easily guessed 8-digit PIN?',a:'WPS',w:['WPA3','DHCP'],why:'Wi-Fi Protected Setup. Turn it off.'},
+ {q:'2017 attack that targeted the WPA2 handshake?',a:'KRACK',w:['Smurf','Slowloris'],why:'Key Reinstallation Attack. Fixed with patches.'},
+ {q:'Best choice for a new home router?',a:'WPA3',w:['WEP','WPA-TKIP'],why:'Use WPA2-AES only if a device can’t do WPA3.'}]},
+{n:15,name:'Cellular Generations',code:'1G–5G',color:'#f43f5e',
+ objectives:'What each generation added',
+ terms:'Roughly one new generation every ten years.',
+ facts:['1G: analog voice. 2G: digital voice + texting (GSM). 3G: mobile internet.','4G: LTE, all-IP, fast data, VoLTE voice.','5G: NR, very fast, very low delay, lots of IoT devices.'],
+ qs:[
+ {q:'1G phones carried…',a:'Analog voice',w:['Texting','Video calls'],why:'No data and no encryption.'},
+ {q:'Which generation brought text messaging (SMS)?',a:'2G',w:['1G','4G'],why:'2G was the first digital generation.'},
+ {q:'Main 2G standard used around the world?',a:'GSM',w:['LTE','5G NR'],why:'Global System for Mobile Communications.'},
+ {q:'Which generation brought real mobile internet?',a:'3G',w:['1G','2G'],why:'3G made web browsing on phones practical.'},
+ {q:'The 4G standard is called…',a:'LTE',w:['GSM','AMPS'],why:'Long Term Evolution.'},
+ {q:'Voice calls over a 4G network are…',a:'VoLTE',w:['SMS','AMPS'],why:'Voice over LTE.'},
+ {q:'First generation that was all-IP?',a:'4G',w:['2G','3G'],why:'Everything, even voice, runs as IP data.'},
+ {q:'5G radio standard is called…',a:'NR (New Radio)',w:['LTE','GSM'],why:'5G NR.'},
+ {q:'Big advantage of 5G?',a:'Very low latency',w:['Analog voice','Longer range'],why:'Also huge speeds and support for many IoT devices.'}]},
+{n:16,name:'Cellular Topology',code:'Cells',color:'#14b8a6',
+ objectives:'Cells, hexagons, frequency reuse, handover, cell sizes',
+ terms:'A cell is the area one tower (or sector) covers.',
+ facts:['Cells are drawn as hexagons because they fit together with no gaps.','Frequency reuse: cells far apart can use the same frequencies.','Handover: passing a call between cells as you move.','Cell sizes: macro (biggest) > micro > pico > femto (smallest).','Most towers have 3 sectors of 120° each.'],
+ qs:[
+ {q:'Area covered by one cell tower is a…',a:'Cell',w:['Zone','Grid'],why:'That is why they are called cell phones.'},
+ {q:'Shape used to draw cells on a map?',a:'Hexagon',w:['Circle','Triangle'],why:'Hexagons fit together with no gaps.'},
+ {q:'Passing your call to the next tower as you drive?',a:'Handover',w:['Roaming','Paging'],why:'Also called handoff.'},
+ {q:'Using the same frequencies in cells far apart?',a:'Frequency reuse',w:['Roaming','Jamming'],why:'It lets carriers serve more users.'},
+ {q:'Biggest type of cell?',a:'Macrocell',w:['Femtocell','Picocell'],why:'Big towers covering miles.'},
+ {q:'Smallest type of cell, used inside a house?',a:'Femtocell',w:['Macrocell','Microcell'],why:'A small box that plugs into home internet.'},
+ {q:'Splitting a tower’s coverage into 3 pie slices is…',a:'Sectorization',w:['Roaming','Handover'],why:'Usually 3 sectors of 120° each.'},
+ {q:'Using another carrier’s network while traveling?',a:'Roaming',w:['Handover','Sectoring'],why:'Your home carrier still bills you.'}]},
+{n:17,name:'Cellular Structure',code:'BSS / NSS',color:'#fb923c',
+ objectives:'GSM pieces: MS, BTS, BSC, MSC, BSS, NSS, HLR, VLR, AuC, EIR, OSS',
+ terms:'Signal path: Phone → BTS → BSC → MSC → outside world.',
+ facts:['MS = mobile station (your phone + SIM).','BTS = the radio on the tower. BSC = controls many BTSs.','BSS (Base Station Subsystem) = BTS + BSC.','MSC = Mobile Switching Center, the main call switch.','NSS (Network Switching Subsystem) = MSC + HLR + VLR + AuC + EIR.','HLR = home subscriber database. VLR = visitors in the area. AuC = authentication keys. EIR = stolen phone list.','OSS = Operation and Support Subsystem (monitoring and maintenance).'],
+ qs:[
+ {q:'The radio equipment on a cell tower?',a:'BTS',w:['BSC','MSC'],why:'Base Transceiver Station.'},
+ {q:'What does BSC stand for?',a:'Base Station Controller',w:['Basic Signal Channel','Base Switch Center'],why:'It controls a group of BTSs.'},
+ {q:'What does MSC stand for?',a:'Mobile Switching Center',w:['Main Signal Controller','Mobile SIM Card'],why:'It switches and routes calls.'},
+ {q:'BTS + BSC together are called the…',a:'BSS',w:['NSS','OSS'],why:'Base Station Subsystem.'},
+ {q:'The MSC, HLR and VLR are part of the…',a:'NSS',w:['BSS','OSS'],why:'Network Switching Subsystem.'},
+ {q:'Correct order of a call’s path?',a:'BTS → BSC → MSC',w:['MSC → BTS → BSC','BSC → MSC → BTS'],why:'Phone to tower, tower to controller, controller to switch.'},
+ {q:'Your phone plus its SIM card is called the…',a:'Mobile station',w:['Base station','Switch'],why:'MS = mobile station.'},
+ {q:'Main database of every subscriber?',a:'HLR',w:['VLR','EIR'],why:'Home Location Register.'},
+ {q:'Database of visitors currently in the area?',a:'VLR',w:['HLR','AuC'],why:'Visitor Location Register.'},
+ {q:'Part that checks your SIM is real?',a:'AuC',w:['EIR','BTS'],why:'Authentication Center.'},
+ {q:'List used to block stolen phones?',a:'EIR',w:['HLR','VLR'],why:'Equipment Identity Register, checked by IMEI.'},
+ {q:'Subsystem that monitors and maintains the network?',a:'OSS',w:['BSS','NSS'],why:'Operation and Support Subsystem.'}]}
+];
+const byN={};for(const l of LAYERS)byN[l.n]=l;
+
+/* ===== Notes panel ===== */
+for(const l of LAYERS){
+ const d=document.createElement('details');d.id='notes-'+l.n;d.style.setProperty('--lc',l.color);
+ d.innerHTML=`<summary><span class="num">${l.n}</span><span>${l.name}</span><span class="pdu">${l.code}</span></summary>
+ <div class="lbody"><dl><dt>Covers</dt><dd>${l.objectives}</dd><dt>Note</dt><dd>${l.terms}</dd></dl>
+ <ul>${l.facts.map(f=>`<li>${f}</li>`).join('')}</ul></div>`;
+ $('intel').append(d);
+}
+
+/* ===== State ===== */
+let W=1,H=1,dpr=1,mode='menu',paused=false,elapsed=0,storm=0,flash=0,shake=0;
+let runType='run',drillN=0,queue=[],qIndex=0,cur=null,phase='idle',resultT=0;
+let health=100,score=0,streak=0,correctN=0,asked=0,missed=[];
+let laneTarget=0,carX=0,lastChipLane=null;
+let cracks=[],parts=[],rain=[],clouds=[],bags={};
+let last=performance.now();
+let victoryT=0;const VICTORY_LEN=6.6;
+let crashT=0,shards=[],debris=[],debrisClock=3,pops=[];const CRASH_LEN=2.9;
+const rnd=(a,b)=>a+Math.random()*(b-a),clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+
+function resize(){const r=canvas.getBoundingClientRect();W=Math.max(1,r.width);H=Math.max(1,r.height);dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);g.setTransform(dpr,0,0,dpr,0,0);
+ rain=Array.from({length:160},()=>({x:rnd(0,W),y:rnd(0,H),v:rnd(230,550),len:rnd(9,26)}));
+ clouds=Array.from({length:24},()=>({x:rnd(-W,W),y:rnd(0,H*.45),w:rnd(W*.08,W*.25),h:rnd(16,50),v:rnd(2,10)}))}
+window.addEventListener('resize',resize);resize();
+
+/* tap helper: works on phones where click is flaky, never double-fires */
+function tap(el,fn){let t=0;el.addEventListener('touchend',e=>{e.preventDefault();t=Date.now();fn()},{passive:false});el.addEventListener('click',()=>{if(Date.now()-t<700)return;fn()})}
+
+function log(text){const e=$('entries');if(e.textContent==='No events yet.')e.textContent='';const row=document.createElement('div');row.className='entry';row.textContent=text;e.prepend(row);while(e.children.length>20)e.lastChild.remove()}
+
+/* ===== Menu / overlays ===== */
+const TOTAL_Q=LAYERS.reduce((a,l)=>a+l.qs.length,0);
+const EXAM_OPTS=`<option value="0">All topics mixed (40 of ${TOTAL_Q})</option>`+LAYERS.map(l=>`<option value="${l.n}">${l.name} (${l.qs.length})</option>`).join('');
+function showMenu(){mode='menu';paused=false;cur=null;phase='idle';$('hud').hidden=true;$('hint').hidden=false;
+ const o=$('overlay');o.hidden=false;
+ o.innerHTML=`<h2>Signal Tornado</h2><p>Pick one topic, or mix them all for <b>40 random questions</b>. Three answers fly out of the storm, one per lane: <b>drive into the right one</b>. Dodge the cows and debris. Survive to win.</p><p>Steer by tapping a lane, the answer buttons, or ◀ ▶. Keyboard: A/D, arrows, or 1/2/3. Space pauses.</p><label for="examSel">Topic</label><select id="examSel">${EXAM_OPTS}</select><label for="modeSel">Mode</label><select id="modeSel"><option value="run">40-question run</option><option value="endless">Endless (until wrecked)</option></select><br><button id="start" class="bigbtn" type="button">Start driving</button>`;
+ $('examSel').value=String(drillN);$('modeSel').value=runType;
+ tap($('start'),()=>{drillN=+$('examSel').value;runType=$('modeSel').value;start()});
+ $('pause').textContent='Pause';
+}
+function bag(n){if(!bags[n]||!bags[n].length)bags[n]=shuffle(byN[n].qs.slice());return bags[n].pop()}
+function start(){
+ bags={};queue=[];qIndex=0;
+ if(runType==='run'){queue=drillN===0?shuffle(LAYERS.flatMap(l=>l.qs.map(q=>({n:l.n,q})))).slice(0,40):shuffle(byN[drillN].qs.slice()).map(q=>({n:drillN,q}))}
+ health=100;score=0;streak=0;correctN=0;asked=0;missed=[];elapsed=0;storm=0;flash=0;shake=0;cracks=[];parts=[];debris=[];pops=[];debrisClock=rnd(2.5,3.5);laneTarget=0;carX=0;paused=false;
+ mode='playing';$('overlay').hidden=true;$('hud').hidden=false;$('hint').hidden=false;$('pause').textContent='Pause';
+ $('entries').textContent='No events yet.';log(`Started ${drillN===0?'all topics':byN[drillN].name} ${runType==='run'?'run':'endless'}`);
+ nextQuestion();updateHUD();
+}
+function nextQuestion(){
+ if(runType!=='endless'&&qIndex>=queue.length){startVictory();return}
+ const item=runType==='endless'?(()=>{const n=drillN||1+Math.floor(Math.random()*LAYERS.length);return{n,q:bag(n)}})():queue[qIndex];
+ qIndex++;
+ const l=byN[item.n],answers=shuffle([item.q.a,...item.q.w]);
+ cur={l,q:item.q,answers,correctLane:answers.indexOf(item.q.a)-1,p:0,tw:[rnd(0,7),rnd(0,7),rnd(0,7)],picked:null};
+ phase='incoming';
+ $('qcard').style.setProperty('--lc',l.color);$('qtag').textContent=l.name;$('qtext').textContent=item.q.q;
+ document.querySelectorAll('.chip').forEach((c,i)=>{c.textContent=answers[i];c.classList.remove('right','wrong')});
+ lastChipLane=null;updateHUD();
+}
+function finish(win){
+ mode='over';phase='idle';$('hud').hidden=true;
+ const acc=asked?Math.round(100*correctN/asked):0;
+ const o=$('overlay');o.hidden=false;
+ const head=win?'Storm survived':'Ejected!';
+ const sub=win?(missed.length?'You made it through. Review the ones you missed:':'Perfect run. Every answer smashed.'):'Out of HP and out the windshield. Here is what got you:';
+ o.innerHTML=`<h2>${head}</h2><div class="result-stats"><span><b>${score}</b>points</span><span><b>${correctN}/${asked}</b>correct</span><span><b>${acc}%</b>accuracy</span><span><b>${Math.floor(elapsed)}s</b>time</span></div><p>${sub}</p>
+ <div class="review">${missed.map(m=>`<div style="border-color:${m.l.color}"><b>${m.l.name}:</b> ${m.q.q}<br>You hit ${m.picked}. Answer: <em>${m.q.a}</em></div>`).join('')}</div>
+ <button id="again" class="bigbtn" type="button">Drive again</button><button id="modes" class="bigbtn ghost" type="button">Change mode</button>`;
+ tap($('again'),start);tap($('modes'),showMenu);
+ log(win?`Run complete: ${score} pts, ${acc}%`:`Wrecked: ${score} pts, ${acc}%`);
+}
+function banner(text,sub,cls){const b=$('banner');b.style.top=cls.includes('low')?'80%':cls.includes('high')?'24%':'';b.className='';b.innerHTML=text+(sub?`<small>${sub}</small>`:'');void b.offsetWidth;b.className=cls+' show'}
+function updateHUD(){
+ const f=$('hpFill');f.style.width=health+'%';f.style.background=health>60?'#4ade80':health>30?'#facc15':'#f87171';
+ $('score').textContent=score;$('streak').textContent=streak;
+ $('qcount').textContent=runType==='endless'?`Q ${Math.max(qIndex,1)}`:`Q ${Math.min(qIndex,queue.length)}/${queue.length}`;
+}
+function wrongDmg(){return runType==='run'&&drillN===0?8:15}
+function travelTime(){return 10.5-(+$('difficulty').value)*.75}
+
+function impact(){
+ const lane=clamp(Math.round(carX),-1,1),picked=cur.answers[lane+1],ok=lane===cur.correctLane,l=cur.l;
+ cur.picked=lane;asked++;
+ const pos=signPos(lane,1);
+ document.querySelectorAll('.chip').forEach((c,i)=>{if(i-1===cur.correctLane)c.classList.add('right');else if(i-1===lane)c.classList.add('wrong')});
+ if(ok){
+  streak++;correctN++;const pts=100+Math.min(streak-1,5)*20;score+=pts;
+  for(let i=0;i<34;i++){const a=rnd(0,Math.PI*2),s=rnd(80,320);parts.push({x:pos.x,y:pos.y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-60,life:rnd(.5,1.1),c:Math.random()<.5?l.color:'#4ade80'})}
+  flash=.08;banner('Correct!',`+${pts}${streak>1?' • streak '+streak:''}`,'good');
+  log(`HIT ✔: ${picked} (+${pts})`);
+ }else{
+  streak=0;health=Math.max(0,health-wrongDmg());shake=RM?0:14;flash=.18;
+  cracks.push({x:pos.x,y:pos.y,r:rnd(30,48),age:0,color:'#f87171',name:picked});
+  missed.push({l,q:cur.q,picked});
+  banner('Wrong',`Answer: ${cur.q.a}`,'bad');
+  log(`HIT ✘: ${picked} — answer was ${cur.q.a} (−${wrongDmg()} HP)`);
+ }
+ $('fact').style.borderColor=l.color;$('factTitle').style.color=l.color;
+ $('factTitle').textContent=`${l.name}: ${ok?'correct':'wrong'}`;
+ $('factText').textContent=cur.q.q;
+ $('factAnswer').textContent=(ok?'✔ ':'✘ You hit '+picked+'. ')+'Answer: '+cur.q.a+'. '+cur.q.why;
+ const ob=$('openNotes');ob.hidden=false;ob.textContent=`Open ${l.name} notes`;ob.dataset.n=l.n;
+ phase='result';resultT=ok?1.5:2.8;updateHUD();
+}
+$('openNotes').addEventListener('click',e=>{const d=$('notes-'+e.currentTarget.dataset.n);if(!d)return;d.open=true;d.scrollIntoView({behavior:RM?'auto':'smooth',block:'start'})});
+
+/* ===== Projection: 3 lanes (-1,0,1) in perspective ===== */
+const HZ=()=>H*.6;
+const lw=e=>W*(.035+.3*e);
+const sx=(L,e)=>W/2+(L-carX)*lw(e);
+const gy=e=>HZ()+(H-HZ())*e;
+function signPos(L,p){const e=Math.pow(clamp(p,0,1),1.35),w=lw(e)*.9,h=w*.56,bob=cur?Math.sin(storm*3+cur.tw[L+1])*(1-e)*H*.05:0;
+ return{x:sx(L,e)+Math.sin(storm*2+L)*(1-e)*W*.01,y:HZ()+(H*.8-HZ())*e-h*.4+bob,w,h,e}}
+
+/* ===== Drawing ===== */
+function drawBackground(dt){
+ const sky=g.createLinearGradient(0,0,0,H);sky.addColorStop(0,'#07121e');sky.addColorStop(.46,'#303d49');sky.addColorStop(.62,'#637078');sky.addColorStop(1,'#28342e');g.fillStyle=sky;g.fillRect(0,0,W,H);
+ for(const c of clouds){g.fillStyle='#1018207d';g.beginPath();g.ellipse(c.x,c.y,c.w,c.h,0,0,7);g.fill();if(mode==='playing'&&!paused){c.x+=c.v*dt;if(c.x>W+c.w)c.x=-c.w}}
+ const hz=HZ();g.fillStyle='#27382d';g.fillRect(0,hz,W,H-hz);
+ // road
+ g.fillStyle='#20262c';g.beginPath();g.moveTo(sx(-1.5,0),hz);g.lineTo(sx(1.5,0),hz);g.lineTo(sx(1.5,1),H);g.lineTo(sx(-1.5,1),H);g.fill();
+ g.strokeStyle='#b2ad8d';g.lineWidth=3;g.beginPath();g.moveTo(sx(-1.5,0),hz);g.lineTo(sx(-1.5,1),H);g.moveTo(sx(1.5,0),hz);g.lineTo(sx(1.5,1),H);g.stroke();
+ // dashed lane dividers
+ g.strokeStyle='#d9d0a6';
+ for(const L of [-.5,.5])for(let i=0;i<12;i++){const t=((i/12+storm*.25)%1),e1=t*t,e2=Math.min(1,(t+.035)*(t+.035));g.lineWidth=1+4*e1;g.beginPath();g.moveTo(sx(L,e1),gy(e1));g.lineTo(sx(L,e2),gy(e2));g.stroke()}
+ // highlight the lane you are in
+ const cl=clamp(Math.round(carX),-1,1);g.fillStyle='#59c7f014';g.beginPath();g.moveTo(sx(cl-.5,0),hz);g.lineTo(sx(cl+.5,0),hz);g.lineTo(sx(cl+.5,1),H);g.lineTo(sx(cl-.5,1),H);g.fill();
+}
+function drawTornado(){
+ const cx=W*.5-carX*W*.1+Math.sin(storm*.5)*W*.02,top=H*.14,base=HZ()+4;
+ g.save();const grad=g.createLinearGradient(cx-W*.2,0,cx+W*.2,0);grad.addColorStop(0,'#0b111800');grad.addColorStop(.5,'#0b1118dd');grad.addColorStop(1,'#0b111800');g.fillStyle=grad;
+ g.beginPath();g.moveTo(cx-W*.2,top);g.bezierCurveTo(cx-W*.14,H*.38,cx-W*.025,H*.52,cx-W*.015,base);g.lineTo(cx+W*.015,base);g.bezierCurveTo(cx+W*.025,H*.52,cx+W*.14,H*.38,cx+W*.2,top);g.fill();
+ for(let i=0;i<800;i++){const t=(i%400)/400,a=i*2.399+storm*(2.2+t*2),r=(1-t)*W*.17+W*.007,x=cx+Math.cos(a)*r,y=top+t*(base-top);g.fillStyle=`rgba(190,200,206,${.08+.25*Math.abs(Math.sin(a))})`;g.fillRect(x,y,1.2+(1-t)*2.5,1.2+(1-t)*2.5)}
+ for(let i=0;i<55;i++){const a=i*2.399+storm*2,r=(i%14)*W*.006;g.fillStyle='#a7a08b24';g.beginPath();g.arc(cx+Math.cos(a)*r,base+Math.sin(a)*8,4+(i%5)*2,0,7);g.fill()}
+ g.restore();
+}
+function wrapLines(text,maxW,size){g.font=`800 ${size}px system-ui,Arial`;if(g.measureText(text).width<=maxW||!text.includes(' '))return[text];
+ const words=text.split(' ');let best=[text],bestW=Infinity;for(let i=1;i<words.length;i++){const a=words.slice(0,i).join(' '),b=words.slice(i).join(' '),m=Math.max(g.measureText(a).width,g.measureText(b).width);if(m<bestW){bestW=m;best=[a,b]}}return best}
+function roundRect(x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath()}
+function drawSign(L,text,color,p){
+ const s=signPos(L,p);if(s.w<6)return;
+ g.save();g.translate(s.x,s.y);g.rotate(Math.sin(storm*2.4+cur.tw[L+1])*(1-s.e)*.25);
+ g.shadowColor=color;g.shadowBlur=6+s.e*18;g.fillStyle='#0b1620ee';roundRect(-s.w/2,-s.h/2,s.w,s.h,Math.max(3,s.h*.14));g.fill();
+ g.shadowBlur=0;g.lineWidth=Math.max(1.5,s.w*.025);g.strokeStyle=color;g.stroke();
+ if(s.w>18){let size=Math.max(6,s.h*.34),lines;
+  for(let k=0;k<12;k++){lines=wrapLines(text,s.w*.86,size);g.font=`800 ${size}px system-ui,Arial`;const mw=Math.max(...lines.map(t=>g.measureText(t).width));if(mw<=s.w*.86&&lines.length*size*1.1<=s.h*.86)break;size*=.88}
+  g.fillStyle='#f2f8fc';g.textAlign='center';g.textBaseline='middle';const lh=size*1.1;lines.forEach((t,i)=>g.fillText(t,0,(i-(lines.length-1)/2)*lh))}
+ g.restore();
+}
+function drawSigns(){if(!cur||phase!=='incoming')return;const c=cur.l.color;for(const L of [-1,0,1])drawSign(L,cur.answers[L+1],c,cur.p)}
+function drawRain(dt){g.strokeStyle='#c4e0f34a';g.lineWidth=1;for(const r of rain){g.beginPath();g.moveTo(r.x,r.y);g.lineTo(r.x-7,r.y+r.len);g.stroke();if(mode==='playing'&&!paused){r.y+=r.v*dt;r.x-=r.v*.3*dt;if(r.y>H||r.x<0){r.x=rnd(0,W);r.y=rnd(-100,0)}}}}
+function drawCracks(dt){for(const c of cracks){g.save();g.translate(c.x,c.y);g.globalAlpha=clamp(1-c.age/14,0,1);g.strokeStyle='#e0f2ff';g.lineWidth=1.3;
+ for(let i=0;i<15;i++){const a=i*Math.PI/7.5,r=c.r*(.7+(i%4)*.19);g.beginPath();g.moveTo(0,0);g.lineTo(Math.cos(a)*r*.5,Math.sin(a)*r*.5);g.lineTo(Math.cos(a+.13)*r,Math.sin(a+.13)*r);g.stroke()}
+ g.beginPath();g.arc(0,0,c.r*.36,0,7);g.stroke();g.font='bold 14px system-ui,Arial';g.fillStyle=c.color;g.textAlign='center';g.shadowColor='black';g.shadowBlur=8;g.fillText(c.name,0,-c.r-10);g.restore();
+ if(mode==='playing'&&!paused)c.age+=dt}cracks=cracks.filter(c=>c.age<14)}
+function drawParts(dt){for(const p of parts){if(mode==='playing'&&!paused){p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=500*dt;p.life-=dt}g.globalAlpha=clamp(p.life*1.5,0,1);g.fillStyle=p.c;g.fillRect(p.x,p.y,5,5)}g.globalAlpha=1;parts=parts.filter(p=>p.life>0)}
+function drawVehicle(){
+ g.strokeStyle='#070b0f';g.lineWidth=23;g.beginPath();g.moveTo(W*.05,H);g.lineTo(W*.12,0);g.moveTo(W*.95,H);g.lineTo(W*.88,0);g.stroke();
+ const d=g.createLinearGradient(0,H*.83,0,H);d.addColorStop(0,'#35414b');d.addColorStop(1,'#05090e');g.fillStyle=d;g.beginPath();g.moveTo(0,H*.92);g.quadraticCurveTo(W*.5,H*.8,W,H*.92);g.lineTo(W,H);g.lineTo(0,H);g.fill();
+ g.strokeStyle='#06090e';g.lineWidth=18;g.beginPath();g.arc(W*.5,H*1.06,W*.15,Math.PI*1.12,Math.PI*1.88);g.stroke();
+ g.strokeStyle='#4d5860';g.lineWidth=3;g.beginPath();g.arc(W*.5,H*1.06,W*.15,Math.PI*1.12,Math.PI*1.88);g.stroke();
+}
+
+/* ===== Flying debris: cows and junk to dodge ===== */
+const DEBRIS=[{k:'cow',name:'COW',dmg:8,w:3},{k:'tire',name:'TIRE',dmg:5,w:2},{k:'plank',name:'BOARD',dmg:5,w:2},{k:'roof',name:'ROOF TIN',dmg:5,w:1.5},{k:'mail',name:'MAILBOX',dmg:5,w:1.5}];
+const dTime=()=>Math.max(1.7,travelTime()*.45);
+function pickType(){let t=Math.random()*DEBRIS.reduce((a,d)=>a+d.w,0);for(const d of DEBRIS){t-=d.w;if(t<=0)return d}return DEBRIS[0]}
+function spawnDebris(){
+ const td=dTime();
+ // never land within 1s of the answer signs, so you never have to pick between dodging and answering
+ if(phase==='incoming'&&(1-cur.p)*travelTime()<td+1.1)return false;
+ const diff=+$('difficulty').value,me=clamp(Math.round(laneTarget),-1,1);
+ const L1=Math.random()<.5?me:[-1,0,1][Math.floor(Math.random()*3)];
+ const lanes=[L1];
+ if(diff>=6&&Math.random()<.25){const o=[-1,0,1].filter(x=>x!==L1);lanes.push(o[Math.floor(Math.random()*2)])}
+ for(const L of lanes)debris.push({L,p:0,type:pickType(),rot:rnd(0,7),vr:rnd(-5,5)||3,arc:rnd(.15,.3),td});
+ return true;
+}
+function updateDebris(dt){
+ if($('debrisOn').checked){debrisClock-=dt;if(debrisClock<=0){const diff=+$('difficulty').value;debrisClock=spawnDebris()?rnd(2.4,4.2)-diff*.13:.4}}
+ const danger=[false,false,false];
+ for(let i=debris.length-1;i>=0;i--){const d=debris[i];d.p+=dt/d.td;d.rot+=d.vr*dt;
+  if(d.p>.45)danger[d.L+1]=true;
+  if(d.p>=1){debris.splice(i,1);const pos=debrisPos(d.L,1,d),lane=clamp(Math.round(carX),-1,1);
+   if(lane===d.L){health=Math.max(0,health-d.type.dmg);shake=RM?0:12;flash=.15;streak=0;
+    cracks.push({x:pos.x,y:pos.y,r:rnd(26,40),age:0,color:'#ff9f43',name:d.type.name});
+    pops.push({x:pos.x,y:pos.y-40,t:(d.type.k==='cow'?'MOO! ':'')+'−'+d.type.dmg+' HP',c:'#ff9f43',life:1.3});
+    log(`DEBRIS: hit by ${d.type.name.toLowerCase()} (−${d.type.dmg} HP)`);updateHUD();
+    if(health<=0){startCrash();return}
+   }else{score+=25;pops.push({x:pos.x,y:H*.72,t:'+25 dodged',c:'#7bd9ff',life:1});updateHUD()}
+  }}
+ document.querySelectorAll('.chip').forEach((c,i)=>c.classList.toggle('danger',danger[i]));
+}
+function debrisPos(L,p,d){const e=Math.pow(clamp(p,0,1),1.35),size=lw(e)*.85;
+ return{x:sx(L,e),y:HZ()+(H*.76-HZ())*e-Math.sin(e*Math.PI)*H*d.arc,size,e}}
+function drawCow(){
+ g.fillStyle='#2a2a2a';for(const lx of [-30,-14,14,30])g.fillRect(lx-4,10,8,26);
+ g.fillStyle='#f4f1ea';g.strokeStyle='#222';g.lineWidth=2.5;g.beginPath();g.ellipse(0,0,42,24,0,0,7);g.fill();g.stroke();
+ g.fillStyle='#1f1f1f';for(const [x,y,a,b,r] of [[-14,-6,11,8,.4],[16,6,9,7,-.3],[4,-15,7,5,0]]){g.beginPath();g.ellipse(x,y,a,b,r,0,7);g.fill()}
+ g.fillStyle='#f2a6a6';g.beginPath();g.ellipse(-4,23,8,5,0,0,7);g.fill();
+ g.strokeStyle='#222';g.lineWidth=2;g.beginPath();g.moveTo(-42,-4);g.quadraticCurveTo(-58,-12,-55,8);g.stroke();
+ g.strokeStyle='#d8c9a0';g.lineWidth=3.5;g.beginPath();g.moveTo(40,-19);g.lineTo(35,-29);g.moveTo(51,-20);g.lineTo(56,-30);g.stroke();
+ g.fillStyle='#f4f1ea';g.strokeStyle='#222';g.lineWidth=2.5;g.beginPath();g.ellipse(46,-9,14,12,0,0,7);g.fill();g.stroke();
+ g.fillStyle='#f2a6a6';g.beginPath();g.ellipse(57,-5,8,7,0,0,7);g.fill();
+ g.fillStyle='#000';g.beginPath();g.arc(45,-13,2.4,0,7);g.fill();g.beginPath();g.arc(55,-6,1.3,0,7);g.arc(59,-5,1.3,0,7);g.fill();
+}
+function drawTire(){g.strokeStyle='#111';g.lineWidth=18;g.beginPath();g.arc(0,0,30,0,7);g.stroke();
+ g.strokeStyle='#333';g.lineWidth=3;for(let i=0;i<12;i++){const a=i*Math.PI/6;g.beginPath();g.moveTo(Math.cos(a)*24,Math.sin(a)*24);g.lineTo(Math.cos(a)*37,Math.sin(a)*37);g.stroke()}
+ g.fillStyle='#9aa3a8';g.beginPath();g.arc(0,0,15,0,7);g.fill();g.fillStyle='#5d666b';for(let i=0;i<5;i++){const a=i*Math.PI*.4;g.beginPath();g.arc(Math.cos(a)*8,Math.sin(a)*8,2,0,7);g.fill()}}
+function drawPlank(){g.fillStyle='#9b6a3c';g.strokeStyle='#4a2f17';g.lineWidth=2;g.fillRect(-48,-9,96,18);g.strokeRect(-48,-9,96,18);
+ g.strokeStyle='#6e4626';g.lineWidth=1.2;for(const y of [-4,3]){g.beginPath();g.moveTo(-44,y);g.bezierCurveTo(-10,y-3,10,y+3,44,y);g.stroke()}
+ g.fillStyle='#c9ced2';for(const x of [-40,40]){g.beginPath();g.arc(x,0,2.2,0,7);g.fill()}
+ g.strokeStyle='#c9ced2';g.lineWidth=2;g.beginPath();g.moveTo(-40,0);g.lineTo(-52,-10);g.stroke()}
+function drawRoof(){g.fillStyle='#8c979e';g.strokeStyle='#4a5358';g.lineWidth=2;g.beginPath();g.moveTo(-46,-24);g.lineTo(40,-30);g.lineTo(48,24);g.lineTo(-40,30);g.closePath();g.fill();g.stroke();
+ g.strokeStyle='#b8c3c9';g.lineWidth=2;for(let i=-3;i<=3;i++){g.beginPath();g.moveTo(i*12-2,-26-i*.4);g.lineTo(i*12+4,26-i*.4);g.stroke()}
+ g.fillStyle='#a8572c88';g.beginPath();g.ellipse(20,10,12,8,.5,0,7);g.fill()}
+function drawMail(){g.fillStyle='#5b4a3a';g.fillRect(-4,8,8,40);
+ g.fillStyle='#3f4c57';g.strokeStyle='#1e262c';g.lineWidth=2;g.beginPath();g.moveTo(-26,10);g.lineTo(-26,-8);g.arc(0,-8,26,Math.PI,0);g.lineTo(26,10);g.closePath();g.fill();g.stroke();
+ g.fillStyle='#e23b3b';g.fillRect(18,-26,4,22);g.fillRect(18,-26,12,8)}
+const DRAW={cow:drawCow,tire:drawTire,plank:drawPlank,roof:drawRoof,mail:drawMail};
+function drawDebris(front){
+ const sp=cur&&phase==='incoming'?cur.p:-1;
+ for(const d of debris){if((d.p>=sp)!==front)continue;const q=debrisPos(d.L,d.p,d);if(q.size<4)continue;
+  g.save();g.translate(q.x,q.y);g.rotate(d.rot);g.scale(q.size/100,q.size/100);
+  g.shadowColor='#000';g.shadowBlur=8;DRAW[d.type.k]();g.restore()}
+}
+function drawPops(dt){for(const p of pops){if(mode==='playing'&&!paused){p.y-=40*dt;p.life-=dt}g.save();g.globalAlpha=clamp(p.life*1.4,0,1);g.font='900 20px system-ui,Arial';g.textAlign='center';g.lineWidth=4;g.strokeStyle='#000c';g.strokeText(p.t,p.x,p.y);g.fillStyle=p.c;g.fillText(p.t,p.x,p.y);g.restore()}pops=pops.filter(p=>p.life>0)}
+
+/* ===== Win: driver hops out and does an original victory dance ending in a salute ===== */
+function startVictory(){phase='victory';victoryT=0;$('hint').hidden=true;debris=[];cracks=[];$('hud').hidden=true;laneTarget=0;
+ banner('Storm survived!','Tap to skip','good high');log('Run complete: driver out for a victory dance')}
+function drawCalm(){const a=clamp(victoryT/2.5,0,1)*.35;const sun=g.createRadialGradient(W*.75,H*.2,0,W*.75,H*.2,W*.7);sun.addColorStop(0,`rgba(255,226,150,${a})`);sun.addColorStop(1,'rgba(255,226,150,0)');g.fillStyle=sun;g.fillRect(0,0,W,H)}
+function arm(sx,sy,side,a,len){const x=sx+Math.sin(a)*len*side,y=sy+Math.cos(a)*len;limb(sx,sy,x,y)}
+function dancePose(t){
+ const P={la:.15,ra:.15,ll:.12,rl:.12,tilt:0,bob:0,sx:1,salute:false};
+ if(t<1.4){const k=Math.sin(t*Math.PI*4);P.la=Math.PI*(.5+.45*Math.max(0,k));P.ra=Math.PI*(.5+.45*Math.max(0,-k));P.bob=Math.abs(Math.sin(t*Math.PI*4))*5} // fist pumps
+ else if(t<2.6){const w=Math.sin(t*7)*.35;P.la=Math.PI*.85+w;P.ra=Math.PI*.85-w;P.tilt=Math.sin(t*7)*.16;P.ll=.2+w*.3;P.rl=.2-w*.3;P.bob=Math.abs(Math.sin(t*7))*3}// overhead sway
+ else if(t<3.7){const k=Math.sin(t*9);P.la=P.ra=.85;P.ll=Math.max(0,k)*1.25;P.rl=Math.max(0,-k)*1.25;P.bob=Math.abs(k)*4} // kick steps
+ else if(t<4.4){P.la=P.ra=Math.PI/2;P.sx=Math.cos((t-3.7)/.7*Math.PI*2);P.bob=6} // spin
+ else P.salute=true; // salute
+ return P;
+}
+function drawDancer(x,y,s,t){
+ const P=dancePose(t);
+ g.save();g.translate(x,y-P.bob*s);g.scale(s*(Math.abs(P.sx)<.15?.15*Math.sign(P.sx||1):P.sx),s);g.rotate(P.tilt);
+ g.lineCap='round';g.strokeStyle='#4f5a3c';g.lineWidth=10;
+ arm(-5,16,-1,P.ll,30);arm(5,16,1,P.rl,30);
+ if(P.salute){arm(-8,-10,-1,.05,26);g.strokeStyle='#4f5a3c';g.lineWidth=10;g.beginPath();g.moveTo(8,-10);g.lineTo(20,-18);g.lineTo(9,-35);g.stroke();g.fillStyle='#1d2618';g.beginPath();g.arc(9,-35,5,0,7);g.fill()}
+ else{arm(-8,-10,-1,P.la,26);g.strokeStyle='#4f5a3c';g.lineWidth=10;arm(8,-10,1,P.ra,26)}
+ g.fillStyle='#8a8463';roundRect(-12,-18,24,38,7);g.fill();g.strokeStyle='#1d2618';g.lineWidth=2;g.stroke();
+ g.fillStyle='#d9b38c';g.beginPath();g.arc(0,-29,10,0,7);g.fill();
+ g.fillStyle='#4b5a3a';g.beginPath();g.arc(0,-32,13,Math.PI,0);g.fill();g.fillRect(-14,-33,28,4);
+ if(P.sx>0){g.fillStyle='#000';g.beginPath();g.arc(-4,-27,1.8,0,7);g.arc(4,-27,1.8,0,7);g.fill();
+  g.strokeStyle='#000';g.lineWidth=1.8;g.beginPath();g.arc(0,-24,4.5,.15*Math.PI,.85*Math.PI);g.stroke()}
+ g.restore();
+}
+function drawVictory(){
+ const t=victoryT,s=Math.min(W,H)/320*1.7,feet=H*.8,cy=feet-44*s;
+ const hop=clamp(t/.45,0,1),y=cy+(1-hop)*H*.35-Math.sin(hop*Math.PI)*H*.08;
+ g.fillStyle='#0006';g.beginPath();g.ellipse(W*.5,feet+4,26*s,6*s,0,0,7);g.fill();
+ drawDancer(W*.5,y,s,Math.max(0,t-.45));
+ if(t>4.85){g.save();g.globalAlpha=clamp((t-4.85)*3,0,1);g.font='900 22px system-ui,Arial';g.textAlign='center';g.lineWidth=5;g.strokeStyle='#000b';g.strokeText('HOOAH!',W*.5,cy-64*s);g.fillStyle='#ffce86';g.fillText('HOOAH!',W*.5,cy-64*s);g.restore()}
+}
+
+/* ===== Game-over crash: windshield blows out, driver goes into the storm ===== */
+function startCrash(){
+ phase='crash';crashT=0;$('hud').hidden=true;cracks=[];parts=[];debris=[];flash=.4;shake=RM?0:24;
+ shards=[];for(let i=0;i<80;i++){const x=rnd(W*.08,W*.92),y=rnd(H*.04,H*.8),a=Math.atan2(y-H*.5,x-W*.5),sp=rnd(140,560);
+  shards.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-90,r:rnd(0,6),vr:rnd(-10,10),z:rnd(6,24),life:rnd(1,2.3)})}
+ banner('EJECTED!','Out of HP','bad low');log('Out of HP: driver ejected through the windshield');
+}
+function limb(x1,y1,x2,y2){g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();g.fillStyle='#1d2618';g.beginPath();g.arc(x2,y2,5,0,7);g.fill()}
+function drawDriver(x,y,s,rot,t){
+ g.save();g.translate(x,y);g.rotate(rot);g.scale(s,s);
+ const f=Math.sin(t*24),f2=Math.cos(t*19);
+ g.lineCap='round';g.strokeStyle='#4f5a3c';g.lineWidth=10;
+ limb(-5,16,-14+f*10,44);limb(5,16,14-f*10,44); // legs
+ limb(-8,-10,-30,-30+f2*16);limb(8,-10,30,-30-f2*16); // flailing arms
+ g.fillStyle='#8a8463';roundRect(-12,-18,24,38,7);g.fill();g.strokeStyle='#1d2618';g.lineWidth=2;g.stroke(); // torso
+ g.fillStyle='#d9b38c';g.beginPath();g.arc(0,-29,10,0,7);g.fill(); // head
+ g.fillStyle='#4b5a3a';g.beginPath();g.arc(0,-32,13,Math.PI,0);g.fill();g.fillRect(-14,-33,28,4); // helmet
+ g.fillStyle='#fff';g.beginPath();g.arc(-4,-27,3.2,0,7);g.arc(4,-27,3.2,0,7);g.fill(); // big cartoon eyes
+ g.fillStyle='#000';g.beginPath();g.arc(-4,-27,1.4,0,7);g.arc(4,-27,1.4,0,7);g.fill();
+ g.beginPath();g.ellipse(0,-21,3,4,0,0,7);g.fill(); // "aaah" mouth
+ g.restore();
+}
+function drawCrash(){
+ const t=crashT,cx=W*.5,cy=H*.5,R=Math.max(W,H);
+ const ga=clamp(1-t/1.1,0,1);
+ if(ga>0){g.save();g.globalAlpha=ga;g.strokeStyle='#e8f6ff';g.lineWidth=1.8;
+  for(let i=0;i<26;i++){const a=i*Math.PI/13+.1;g.beginPath();g.moveTo(cx,cy);for(let k=1;k<=5;k++){const aa=a+Math.sin(i*7+k)*.08;g.lineTo(cx+Math.cos(aa)*k*R*.14,cy+Math.sin(aa)*k*R*.14)}g.stroke()}
+  for(let k=1;k<5;k++){g.beginPath();for(let i=0;i<=26;i++){const a=i*Math.PI/13+.1,r=k*R*.12*(1+Math.sin(i*3+k)*.12),x=cx+Math.cos(a)*r,y=cy+Math.sin(a)*r;i?g.lineTo(x,y):g.moveTo(x,y)}g.stroke()}
+  g.restore()}
+ const k=clamp(t/2.3,0,1),e=1-Math.pow(1-k,2);
+ if(k<1){
+  const tx=W*.5-carX*W*.1,ty=H*.42,sy=H*1.05;
+  const x=cx+(tx-cx)*e+Math.sin(k*Math.PI)*W*.1;
+  const y=sy+(ty-sy)*e-Math.sin(k*Math.PI)*H*.25;
+  const sc=Math.max(.04,1-e*.95)*Math.min(W,H)/320*1.7;
+  g.strokeStyle='#ffffff40';g.lineWidth=2;for(let i=0;i<5;i++){g.beginPath();g.moveTo(x+(i-2)*12*sc,y+40*sc);g.lineTo(x+(i-2)*16*sc,y+(90+i*8)*sc);g.stroke()}
+  drawDriver(x,y,sc,t*8.5,t);
+ }
+ for(const s of shards){if(s.life<=0)continue;g.save();g.translate(s.x,s.y);g.rotate(s.r);g.globalAlpha=clamp(s.life,0,1)*.9;g.fillStyle='#cfeaff59';g.strokeStyle='#eaf7ff';g.lineWidth=1;g.beginPath();g.moveTo(0,-s.z);g.lineTo(s.z*.7,s.z*.5);g.lineTo(-s.z*.6,s.z*.4);g.closePath();g.fill();g.stroke();g.restore()}
+}
+function syncChips(){const cl=clamp(Math.round(carX),-1,1);if(cl===lastChipLane)return;lastChipLane=cl;document.querySelectorAll('.chip').forEach((c,i)=>c.classList.toggle('on',i-1===cl))}
+
+function frame(now){
+ requestAnimationFrame(frame);
+ const dt=Math.min((now-last)/1000,.05);last=now;
+ if(mode==='playing'&&!paused){
+  elapsed+=dt;storm+=dt;
+  carX+= (laneTarget-carX)*Math.min(1,dt*10);
+  if(phase==='incoming'||phase==='result')updateDebris(dt);
+  if(phase==='incoming'){cur.p+=dt/travelTime();if(cur.p>=1)impact()}
+  else if(phase==='result'){resultT-=dt;if(resultT<=0){if(health<=0)startCrash();else nextQuestion()}}
+  else if(phase==='crash'){crashT+=dt;for(const s of shards){s.x+=s.vx*dt;s.y+=s.vy*dt;s.vy+=420*dt;s.r+=s.vr*dt;s.life-=dt}if(crashT>=CRASH_LEN)finish(false)}
+  else if(phase==='victory'){victoryT+=dt;if(Math.random()<dt*40){const C=['#ec4899','#a78bfa','#06b6d4','#22c55e','#eab308','#f97316','#ef4444'];parts.push({x:rnd(0,W),y:rnd(-20,H*.2),vx:rnd(-40,40),vy:rnd(0,80),life:rnd(1.6,2.6),c:C[Math.floor(Math.random()*7)]})}if(victoryT>=VICTORY_LEN)finish(true)}
+  if(Math.random()<dt*.1)flash=Math.max(flash,.1);
+  flash=Math.max(0,flash-dt);shake=Math.max(0,shake-dt*50);
+  if(phase==='incoming')syncChips();
+ }
+ g.clearRect(0,0,W,H);g.save();if(shake>0)g.translate(rnd(-shake,shake),rnd(-shake*.5,shake*.5));
+ drawBackground(dt);if(phase==='victory'){g.save();g.globalAlpha=clamp(1-victoryT/2,0,1);drawTornado();g.restore();drawCalm()}else drawTornado();drawDebris(false);drawSigns();drawDebris(true);drawRain(dt);drawCracks(dt);if(phase==='victory')drawVictory();drawParts(dt);drawVehicle();drawPops(dt);if(phase==='crash')drawCrash();
+ if(flash>0){g.fillStyle=`rgba(225,240,255,${flash*2})`;g.fillRect(0,0,W,H)}g.restore();
+}
+
+/* ===== Controls ===== */
+const canSteer=()=>mode==='playing'&&!paused&&(phase==='incoming'||phase==='result');
+function moveLane(d){if(!canSteer())return;$('hint').hidden=true;laneTarget=clamp(laneTarget+d,-1,1)}
+function setLane(L){if(!canSteer())return;$('hint').hidden=true;laneTarget=clamp(L,-1,1)}
+function togglePause(){if(mode!=='playing')return;paused=!paused;$('pause').textContent=paused?'Resume':'Pause'}
+tap($('pause'),togglePause);
+tap($('restart'),()=>{if(mode==='menu')return;start()});
+tap($('menuBtn'),showMenu);
+document.addEventListener('keydown',e=>{const k=e.key.toLowerCase();
+ if(['a','d','arrowleft','arrowright',' ','1','2','3'].includes(k)&&e.target.tagName!=='SELECT')e.preventDefault();else return;
+ if(e.repeat)return;
+ if(k==='a'||k==='arrowleft')moveLane(-1);else if(k==='d'||k==='arrowright')moveLane(1);
+ else if(k==='1'||k==='2'||k==='3')setLane(+k-2);else if(k===' ')togglePause()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&mode==='playing'&&!paused)togglePause()});
+// tap/drag on the windshield picks the lane under your finger
+let dragId=null;
+const laneAt=x=>clamp(Math.floor((x-canvas.getBoundingClientRect().left)/(W/3))-1,-1,1);
+canvas.addEventListener('pointerdown',e=>{if(phase==='victory'&&victoryT>1.5){victoryT=VICTORY_LEN;return}if(!canSteer())return;e.preventDefault();dragId=e.pointerId;try{canvas.setPointerCapture(e.pointerId)}catch(_){}setLane(laneAt(e.clientX))});
+canvas.addEventListener('pointermove',e=>{if(e.pointerId!==dragId)return;e.preventDefault();setLane(laneAt(e.clientX))});
+for(const t of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(t,e=>{if(e.pointerId===dragId)dragId=null});
+document.querySelectorAll('.chip').forEach(c=>{c.addEventListener('pointerdown',e=>{e.preventDefault();setLane(+c.dataset.lane)});c.addEventListener('keydown',e=>{if(e.key==='Enter')setLane(+c.dataset.lane)})});
+for(const [id,d] of [['left',-1],['right',1]]){const b=$(id);
+ b.addEventListener('pointerdown',e=>{e.preventDefault();b.classList.add('pressed');moveLane(d)});
+ for(const t of ['pointerup','pointercancel','pointerleave'])b.addEventListener(t,()=>b.classList.remove('pressed'));
+ b.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();moveLane(d)}})}
+
+showMenu();requestAnimationFrame(frame);
+})();
+</script></body></html>
